@@ -1,0 +1,134 @@
+version: "3.9"
+
+services:
+  # =========================================
+  # Keycloak Identity Provider
+  # =========================================
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: oauth2-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - oauth2-network
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080;echo -e 'GET /health/ready HTTP/1.1\r\nhost: http://localhost\r\nConnection: close\r\n\r\n' >&3;grep 'HTTP/1.1 200 OK' <&3"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # =========================================
+  # PostgreSQL (Keycloak Database)
+  # =========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: oauth2-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - oauth2-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  # =========================================
+  # Redis (Session Store)
+  # =========================================
+  redis:
+    image: redis:7-alpine
+    container_name: oauth2-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - oauth2-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # =========================================
+  # FastAPI OAuth2 Proxy
+  # =========================================
+  oauth2-proxy:
+    build: .
+    container_name: oauth2-proxy
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      KEYCLOAK_SERVER_URL: http://keycloak:8080
+      REDIS_URL: redis://redis:6379
+      UPSTREAM_URL: http://upstream:80
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - oauth2-network
+    volumes:
+      - ./app:/app/app:ro
+    restart: unless-stopped
+
+  # =========================================
+  # Upstream Service (Example)
+  # =========================================
+  upstream:
+    image: kennethreitz/httpbin
+    container_name: oauth2-upstream
+    ports:
+      - "9000:80"
+    networks:
+      - oauth2-network
+
+  # =========================================
+  # Adminer (Database UI - Optional)
+  # =========================================
+  adminer:
+    image: adminer:latest
+    container_name: oauth2-adminer
+    ports:
+      - "8081:8080"
+    networks:
+      - oauth2-network
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  oauth2-network:
+    driver: bridge

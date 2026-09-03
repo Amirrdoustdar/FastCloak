@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class SessionService:
-    """Redis-based session management"""
+    """Redis session management"""
     
     def __init__(self):
         self.redis = aioredis.from_url(
@@ -46,18 +46,18 @@ class SessionService:
             session_data.model_dump_json(),
         )
         
-        logger.info(f"Created session for user: {user_info['email']}")
+        logger.info(f"Created session for: {user_info['email']}")
         return session_id
     
     async def get_session(self, session_id: str) -> Optional[SessionData]:
-        """Get session data"""
+        """Get session"""
         data = await self.redis.get(f"session:{session_id}")
         if not data:
             return None
         return SessionData.model_validate_json(data)
     
     async def update_session(self, session_id: str, session_data: SessionData) -> bool:
-        """Update session data"""
+        """Update session"""
         result = await self.redis.setex(
             f"session:{session_id}",
             settings.SESSION_EXPIRE_SECONDS,
@@ -71,7 +71,7 @@ class SessionService:
         return result > 0
     
     async def refresh_session(self, session_id: str) -> bool:
-        """Reset session TTL"""
+        """Refresh session TTL"""
         result = await self.redis.expire(
             f"session:{session_id}",
             settings.SESSION_EXPIRE_SECONDS,

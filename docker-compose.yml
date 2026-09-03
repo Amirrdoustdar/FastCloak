@@ -61,20 +61,20 @@ services:
   # Redis (Session Store)
   # =========================================
   redis:
-    image: redis:7-alpine
-    container_name: oauth2-redis
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - oauth2-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
+  image: redis:7-alpine
+  container_name: oauth2-redis
+  command: redis-server --requirepass ${REDIS_PASSWORD:-changeme123}
+  ports:
+    - "6379:6379"
+  volumes:
+    - redis_data:/data
+  networks:
+    - oauth2-network
+  healthcheck:
+    test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD:-changeme123}", "ping"]
+    interval: 10s
+    timeout: 3s
+    retries: 5
 
   # =========================================
   # FastAPI OAuth2 Proxy

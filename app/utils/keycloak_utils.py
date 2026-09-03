@@ -11,7 +11,7 @@ def get_current_session(request: Request) -> SessionData:
 
 
 def require_roles(roles: List[str]):
-    """Dependency - require specific Keycloak roles"""
+    """Require specific roles"""
     def check_roles(session: SessionData = Depends(get_current_session)):
         if not session.has_any_role(roles):
             raise HTTPException(
@@ -23,7 +23,7 @@ def require_roles(roles: List[str]):
 
 
 def require_group(group: str):
-    """Dependency - require specific Keycloak group"""
+    """Require specific group"""
     def check_group(session: SessionData = Depends(get_current_session)):
         if not session.in_group(group):
             raise HTTPException(

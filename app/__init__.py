@@ -1,7 +1,13 @@
-"""
-OAuth2 Proxy with Keycloak Integration
-"""
+from app.utils.keycloak_utils import (
+    get_current_session,
+    require_roles,
+    require_group,
+    RoleChecker,
+)
 
-__version__ = "1.0.0"
-__author__ = "Your Name"
-__description__ = "FastAPI OAuth2 Reverse Proxy with Keycloak SSO"
+__all__ = [
+    "get_current_session",
+    "require_roles",
+    "require_group",
+    "RoleChecker",
+]

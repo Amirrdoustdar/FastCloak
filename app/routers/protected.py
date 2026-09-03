@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends
 from app.utils.keycloak_utils import (
-    require_roles,
     RoleChecker,
     get_current_session,
 )
 from app.models.session import SessionData
 
-router = APIRouter(prefix="/api", tags=["Protected Routes"])
+router = APIRouter(prefix="/api", tags=["Protected"])
 
 admin_only = RoleChecker(["admin"])
 manager_only = RoleChecker(["admin", "manager"])
@@ -14,7 +13,7 @@ manager_only = RoleChecker(["admin", "manager"])
 
 @router.get("/dashboard")
 async def dashboard(session: SessionData = Depends(get_current_session)):
-    """Any authenticated user"""
+    """Dashboard"""
     return {
         "message": f"Welcome {session.name}!",
         "roles": session.roles,
@@ -24,13 +23,13 @@ async def dashboard(session: SessionData = Depends(get_current_session)):
 
 @router.get("/admin/panel", dependencies=[Depends(admin_only)])
 async def admin_panel():
-    """Admin only"""
+    """Admin panel"""
     return {"message": "Admin panel"}
 
 
 @router.get("/manager/reports", dependencies=[Depends(manager_only)])
 async def manager_reports():
-    """Admin or Manager"""
+    """Manager reports"""
     return {"message": "Manager reports"}
 
 

@@ -12,13 +12,7 @@ class OAuth2Service:
     
     def __init__(self):
         self.provider_name = settings.OAUTH2_PROVIDER
-        self.provider = self._init_provider()
-    
-    def _init_provider(self):
-        if settings.OAUTH2_PROVIDER == "keycloak":
-            return KeycloakOIDCProvider()
-        else:
-            raise ValueError(f"Unsupported provider: {settings.OAUTH2_PROVIDER}")
+        self.provider = KeycloakOIDCProvider()
     
     def generate_state(self) -> str:
         return secrets.token_urlsafe(32)
@@ -34,11 +28,10 @@ class OAuth2Service:
         user_info = await self.provider.get_user_info(access_token)
         user_info["raw_token"] = token_data
         
-        if self.provider_name == "keycloak":
-            decoded = await self.provider.decode_token(access_token)
-            user_info["roles"] = self.provider.extract_roles(decoded)
-            user_info["groups"] = self.provider.extract_groups(decoded)
-            user_info["decoded_token"] = decoded
+        decoded = await self.provider.decode_token(access_token)
+        user_info["roles"] = self.provider.extract_roles(decoded)
+        user_info["groups"] = self.provider.extract_groups(decoded)
+        user_info["decoded_token"] = decoded
         
         return user_info
     
@@ -46,6 +39,7 @@ class OAuth2Service:
         """Check if user is allowed"""
         email = user_info.get("email", "")
         
+        # Email/domain check
         if settings.ALLOWED_EMAILS or settings.ALLOWED_DOMAINS:
             if email in settings.ALLOWED_EMAILS:
                 return True
@@ -54,19 +48,14 @@ class OAuth2Service:
                 return True
             return False
         
-        if self.provider_name == "keycloak":
-            decoded = user_info.get("decoded_token", {})
-            return self.provider.check_authorization(decoded)
-        
-        return True
+        # Role/group check
+        decoded = user_info.get("decoded_token", {})
+        return self.provider.check_authorization(decoded)
     
     async def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
         """Refresh access token"""
-        if self.provider_name == "keycloak":
-            return await self.provider.refresh_token(refresh_token)
-        raise NotImplementedError("Token refresh not implemented for this provider")
+        return await self.provider.refresh_token(refresh_token)
     
     async def logout(self, refresh_token: str) -> None:
         """Provider-side logout"""
-        if self.provider_name == "keycloak":
-            await self.provider.logout(refresh_token)
+        await self.provider.logout(refresh_token)

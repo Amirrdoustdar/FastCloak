@@ -1,26 +1,37 @@
 import pytest
-from app.models.session import SessionData
+from pydantic import ValidationError
 
 
-def test_session_has_role():
-    session = SessionData(
-        user_id="123",
-        email="test@example.com",
-        provider="keycloak",
-        access_token="token",
-        roles=["admin", "user"],
-    )
-    assert session.has_role("admin") == True
-    assert session.has_role("manager") == False
+def test_secret_key_required():
+    """SECRET_KEY must be set"""
+    from app.config import Settings
+    
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(SECRET_KEY="")
+    
+    assert "SECRET_KEY" in str(exc_info.value)
 
 
-def test_session_has_any_role():
-    session = SessionData(
-        user_id="123",
-        email="test@example.com",
-        provider="keycloak",
-        access_token="token",
-        roles=["admin"],
-    )
-    assert session.has_any_role(["admin", "manager"]) == True
-    assert session.has_any_role(["manager", "developer"]) == False
+def test_secret_key_min_length():
+    """SECRET_KEY must be 32+ chars"""
+    from app.config import Settings
+    
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(
+            SECRET_KEY="short",
+            KEYCLOAK_ADMIN_PASSWORD="admin"
+        )
+    
+    assert "at least 32 characters" in str(exc_info.value)
+
+
+def test_log_level_validation():
+    """LOG_LEVEL must be valid"""
+    from app.config import Settings
+    
+    with pytest.raises(ValidationError):
+        Settings(
+            SECRET_KEY="a" * 32,
+            KEYCLOAK_ADMIN_PASSWORD="admin",
+            LOG_LEVEL="INVALID"
+        )

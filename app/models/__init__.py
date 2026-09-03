@@ -1,4 +1,4 @@
 from app.models.user import User
-from app.models.session import SessionData, TokenResponse
+from app.models.session import SessionData
 
-__all__ = ["User", "SessionData", "TokenResponse"]
+__all__ = ["User", "SessionData"]

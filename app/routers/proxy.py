@@ -10,7 +10,7 @@ proxy_service = ProxyService()
     methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 )
 async def proxy(request: Request, path: str):
-    """Proxy requests to upstream with user headers injected"""
+    """Proxy requests to upstream"""
     
     if not hasattr(request.state, "user"):
         raise HTTPException(status_code=401, detail="Not authenticated")

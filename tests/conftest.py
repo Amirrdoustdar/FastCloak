@@ -1,12 +1,17 @@
 import pytest
 from fastapi.testclient import TestClient
-from app.main import create_app
+from app.main import create_app  # ✅ FIXED: create_app exists now
 
 
 @pytest.fixture
-def client():
-    """Test client fixture"""
-    app = create_app()
+def app():
+    """Create app"""
+    return create_app()
+
+
+@pytest.fixture
+def client(app):
+    """Test client"""
     return TestClient(app)
 
 

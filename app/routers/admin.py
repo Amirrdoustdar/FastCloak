@@ -1,14 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 from app.services.keycloak_admin_service import KeycloakAdminService
 from app.utils.keycloak_utils import RoleChecker
-import logging
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
-logger = logging.getLogger(__name__)
 
-admin_required = RoleChecker(["admin", "realm-admin"])
+admin_required = RoleChecker(["admin"])
 keycloak_admin = KeycloakAdminService()
 
 
@@ -23,13 +21,13 @@ class CreateUserRequest(BaseModel):
 
 @router.get("/users", dependencies=[Depends(admin_required)])
 async def list_users(search: str = ""):
-    """List all users in Keycloak realm"""
+    """List users"""
     return await keycloak_admin.get_users(search)
 
 
 @router.post("/users", dependencies=[Depends(admin_required)])
 async def create_user(data: CreateUserRequest):
-    """Create new user in Keycloak"""
+    """Create user"""
     try:
         user_id = await keycloak_admin.create_user(
             email=data.email,
@@ -46,7 +44,7 @@ async def create_user(data: CreateUserRequest):
 
 @router.get("/users/{user_id}", dependencies=[Depends(admin_required)])
 async def get_user(user_id: str):
-    """Get user by ID"""
+    """Get user"""
     return await keycloak_admin.get_user(user_id)
 
 
@@ -59,12 +57,5 @@ async def delete_user(user_id: str):
 
 @router.get("/roles", dependencies=[Depends(admin_required)])
 async def list_roles():
-    """List all realm roles"""
+    """List roles"""
     return await keycloak_admin.get_realm_roles()
-
-
-@router.post("/users/{user_id}/logout", dependencies=[Depends(admin_required)])
-async def force_logout_user(user_id: str):
-    """Force logout a user from all sessions"""
-    await keycloak_admin.logout_user(user_id)
-    return {"message": "User logged out"}

@@ -14,7 +14,7 @@ session_service = SessionService()
 
 @router.get("/login")
 async def login(request: Request, redirect_to: str = "/"):
-    """Initiate OAuth2/Keycloak login"""
+    """Initiate login"""
     state = oauth2_service.generate_state()
     auth_url = oauth2_service.get_authorization_url(state)
     
@@ -37,15 +37,15 @@ async def login(request: Request, redirect_to: str = "/"):
 
 @router.get("/callback")
 async def callback(request: Request, code: str, state: str):
-    """Handle Keycloak callback"""
+    """Handle callback"""
     stored_state = request.cookies.get("oauth_state")
     if not stored_state or stored_state != state:
-        raise HTTPException(status_code=400, detail="Invalid state parameter")
+        raise HTTPException(status_code=400, detail="Invalid state")
     
     try:
         user_info = await oauth2_service.authenticate(code)
     except Exception as e:
-        logger.error(f"Authentication failed: {e}")
+        logger.error(f"Auth failed: {e}")
         raise HTTPException(status_code=400, detail="Authentication failed")
     
     if not oauth2_service.is_allowed(user_info):
@@ -76,7 +76,7 @@ async def callback(request: Request, code: str, state: str):
 
 @router.get("/logout")
 async def logout(request: Request):
-    """Logout from app AND Keycloak"""
+    """Logout"""
     session_id = request.cookies.get(settings.COOKIE_NAME)
     
     if session_id:
@@ -94,7 +94,7 @@ async def logout(request: Request):
 
 @router.get("/me")
 async def get_current_user(request: Request):
-    """Get current user with roles"""
+    """Get current user"""
     if not hasattr(request.state, "user"):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
